@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="">
+    <script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js/dist/web3.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.light_blue-amber.min.css" />
+    <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <script src="ABI.js"></script>
+    <style>
+        body {
+            background-color: #333;
+        }
+
+        .color-black {
+            color: #111;
+        }
+
+        .donation-box {
+            margin: auto;
+            max-width: 400px;
+            width: 95%;
+        }
+        .donation-notification-box {
+            margin-bottom: 15%; 
+        }
+        .donation-notification-box .donation-notification-header {
+            font-size: 1.2em;
+            margin: 2% 0;
+            color: #FFFFFF;
+        }
+
+        .donation-card {
+            width: 100%;
+        }
+
+        .hide {
+            display: none;
+        }
+    </style>
+
+
+</head>
+
+<body>
+    <div class="mdl-layout mdl-js-layout mdl-layout--fixed-drawer">
+        <div class="donation-input-box donation-box">
+            <div class="mdl-card mdl-shadow--2dp donation-card">
+                <div class="mdl-card__title">
+                    <h2 class="mdl-card__title-text">斗內資訊</h2>
+                </div>
+
+                <div class="mdl-card__supporting-text ">
+                    <form action="#">
+                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                            <input class="mdl-textfield__input" type="text" id="donation-recv-address">
+                            <label class="mdl-textfield__label" for="donate-recv-address">地址</label>
+                        </div>
+                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                            <input class="mdl-textfield__input" type="text" pattern="-?[0-9]*(\.[0-9]+)?" id="donation-amount">
+                            <label class="mdl-textfield__label" for="donate-amount">金額</label>
+                            <span class="mdl-textfield__error">Input is not a number!</span>
+                        </div>
+                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                            <input class="mdl-textfield__input" type="text" id="donation-donor">
+                            <label class="mdl-textfield__label" for="donation-donor">斗內暱稱</label>
+                        </div>
+                        <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+                            <textarea class="mdl-textfield__input" type="text" rows= "3" id="donation-mssg" ></textarea>
+                            <label class="mdl-textfield__label" for="donation-mssg">斗內訊息</label>
+                        </div>
+                    </form>
+                </div>
+                <div class="mdl-card__menu">
+                    <button class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent">
+                        <span class='mdl-color-text--black' id="donate-btn">Donate!</span>
+                    </button>
+                </div>
+            </div>
+
+
+        </div>
+        <div class="donation-notification-box donation-box">
+            <div class="donation-notification-header"> Waiting for donations..</div>
+            <div id="p2" class="mdl-progress mdl-js-progress mdl-progress__indeterminate progress-bar"></div>
+            <div class="mdl-card mdl-shadow--2dp donation-card donation-notification-card hide">
+                <div class="mdl-card__title">
+                    <h2 class="mdl-card__title-text donation-donor_name">name</h2>
+                </div>
+                <div class="mdl-card__supporting-text ">
+                    <div class="">
+                        <span class='mdl-color-text--black'> Donor address:</span>
+                        <span class="donation-donor_addr"></span>
+                    </div>
+                    <div class="">
+                        <span class='mdl-color-text--black'>Recv. address:</span>
+                        <span class="donation-recv_addr"></span>
+                    </div>
+                    <div class="">
+                        <span class='mdl-color-text--black'>Donate message:</span>
+                        <span class="donation-donate_mssg"></span>
+                    </div>
+                </div>
+                <div class="mdl-card__menu">
+                    <span class="donation-donate_value mdl-color-text--black">0.00</span> ETH
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</body>
+<script>
+    $(document).ready(function () {
+        if (typeof web3 !== 'undefined') {
+            web3 = new Web3(web3.currentProvider);
+        } else {
+            web3 = new Web3(new Web3.providers.HttpProvider("https://api.myetherapi.com/rop"));
+        }
+
+        function formatBigNumber(num) {
+            function formatNumber(val) {
+                let val_length = val.toString().length;
+                return val / (10 ** (val_length - 1));
+            }
+            let bn;
+            if (num['c'].length == 1) {
+                bn = formatNumber(num['c'][0]) * (10 ** (num['e'] - 18));
+            } else {
+                bn = (formatNumber(num['c'][0].toString() + num['c'][1].toString()) * (10 ** (num['e'] - 18)));
+            }
+            return bn.toFixed(7);
+        }
+        console.log(web3);
+        const DonateContractABI = web3.eth.contract(CONTRACT_ABI);
+        const DonateContract = DonateContractABI.at("0x45d8a9f9d2495250041d9715ad54289473c458d6");
+      
+        $('#donate-btn').click(function(){
+            let daddr = $('#donation-recv-address').val();
+            let damount = $('#donation-amount').val();
+            let ddonor = $('#donation-donor').val();
+            let dmssg = $('#donation-mssg').val();
+            let donateTransactionOptions = {
+                from: web3.eth.accounts[0],
+                gas: 4000000,
+                gasPrice: web3.toWei(20, 'gwei'),
+                value: web3.toWei(damount, 'ether'),
+            };
+            console.log(daddr, ddonor, dmssg, damount);
+            DonateContract.donate(daddr, ddonor, dmssg, donateTransactionOptions,
+                function (error, result) { //get callback from function which is your transaction key
+                    if (!error) {
+                        console.log(result);
+                    } else {
+                        console.log(error);
+                    }
+                });
+        });
+       
+        let donateEvent = DonateContract.NewDonation();
+        donateEvent.watch(function (error, result) {
+            console.log(result);
+            let donor_addr = result.args.daddr;
+            let donor_name = result.args.donor;
+            let recv_addr = result.args.raddr;
+            let donate_mssg = result.args.message;
+            let donate_value = formatBigNumber(result.args.value);
+            console.log(donate_value);
+            $('.donation-notification-header').text("Got a donation!");
+            $('.donation-donor_name').text(donor_name);
+            $('.donation-donor_addr').text(donor_addr);
+            $('.donation-recv_addr').text(recv_addr);
+            $('.donation-donate_mssg').text(donate_mssg);
+            $('.donation-donate_value').text(donate_value);
+            $('.donation-notification-card').removeClass('hide');
+            $('.progress-bar').addClass('hide');
+            setTimeout(function () {
+                $('.donation-notification-card').addClass('hide');
+                $('.progress-bar').removeClass('hide');
+                $('.donation-notification-header').text("Waiting for donations..");
+            }, 30000);
+        })
+
+    })
+</script>
